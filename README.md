@@ -28,12 +28,12 @@ pip install -r requirements.txt
 ```
 
 4. **Configure Environment Variables**:
-Copy the `.env.example` file to `.env` and add your OpenAI API Key:
+Copy the `.env.example` file to `.env` and add your Google (Gemini) API Key:
 ```bash
 cp .env.example .env
 ```
 Ensure your `.env` contains:
-`OPENAI_API_KEY=your_openai_api_key_here`
+`GOOGLE_API_KEY=your_google_api_key_here`
 
 5. **Run the Agent**:
 ```bash

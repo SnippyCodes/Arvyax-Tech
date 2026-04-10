@@ -25,7 +25,12 @@ def run_chat():
             # The last message is from the AI
             messages = result.get("messages", [])
             if messages:
-                print(f"\nAutoStream Agent: {messages[-1].content}")
+                content = messages[-1].content
+                # Gemini sometimes returns a list of dictionaries instead of a string
+                if isinstance(content, list):
+                    text_parts = [part['text'] for part in content if 'text' in part]
+                    content = "".join(text_parts)
+                print(f"\nAutoStream Agent: {content}")
         except Exception as e:
             print(f"\nAn error occurred: {e}")
 

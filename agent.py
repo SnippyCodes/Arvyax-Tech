@@ -5,7 +5,7 @@ from typing import TypedDict, Annotated, List, Optional, Literal
 from pydantic import BaseModel, Field
 
 from langchain_core.messages import BaseMessage, AIMessage, SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -13,26 +13,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ==========================================
-# 1. Required Mock Tool Execution Function
-# ==========================================
-def mock_lead_capture(name: str, email: str, platform: str) -> None:
-    print("\n" + "="*50)
-    print(f"✅ TOOL EXECUTED: Lead captured successfully: {name}, {email}, {platform}")
-    print("="*50 + "\n")
 
-# ==========================================
-# 2. Knowledge Base (RAG context)
-# ==========================================
+# Required Mock Tool Execution Function
+def mock_lead_capture(name, email, platform):
+    print(f"Lead captured successfully: {name}, {email}, {platform}")
+
+# Knowledge Base (RAG context)
 try:
     with open('knowledge_base.json', 'r') as f:
         KNOWLEDGE_BASE = f.read()
 except FileNotFoundError:
     KNOWLEDGE_BASE = "Knowledge base not found."
 
-# ==========================================
-# 3. State & Schemas Definition
-# ==========================================
+# State & Schemas Definition
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], operator.add]
     intent: str
@@ -51,11 +44,9 @@ class LeadExtraction(BaseModel):
     email: Optional[str] = Field(description="The email address of the user, if provided. Leave null if not provided.")
     platform: Optional[str] = Field(description="The creator platform (e.g., YouTube, Instagram, TikTok), if provided. Leave null if not provided.")
 
-# ==========================================
-# 4. Agent Nodes & Logic
-# ==========================================
-# Initialize LLM
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+# Agent Nodes & Logic
+# Initialize LLM with Gemini 1.5 Flash (Mandatory Stack)
+llm = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
 
 # Create structured output wrappers
 intent_llm = llm.with_structured_output(IntentClassification)
@@ -98,14 +89,24 @@ def handle_lead_capture(state: AgentState):
     if state.get("lead_captured"):
         return {"messages": [AIMessage(content="We've already saved your details! Our team will reach out to you shortly.")]}
 
-    # Extract missing details from the conversation
-    sys_msg = SystemMessage(content="Extract the user's name, email, and creator platform from the conversation. Return null for anything not found.")
+    # Extract details from the conversation
+    sys_msg = SystemMessage(content="""Extract the user's name, email, and creator platform. 
+If a field is not explicitly mentioned, return null (do not return the string "null" or "NA"). 
+Only extract info if the user provided it. Do not guess.""")
     extraction = extractor_llm.invoke([sys_msg] + state["messages"])
     
+    # Helper to sanitize model output (some models return "null" as string)
+    def sanitize(val):
+        if val is None: return None
+        s_val = str(val).strip().lower()
+        if s_val in ["null", "none", "n/a", "", "undefined"]:
+            return None
+        return str(val)
+
     # Merge newly extracted info with existing state info
-    current_name = state.get("lead_name") or extraction.name
-    current_email = state.get("lead_email") or extraction.email
-    current_platform = state.get("lead_platform") or extraction.platform
+    current_name = sanitize(state.get("lead_name")) or sanitize(extraction.name)
+    current_email = sanitize(state.get("lead_email")) or sanitize(extraction.email)
+    current_platform = sanitize(state.get("lead_platform")) or sanitize(extraction.platform)
 
     missing = []
     if not current_name: missing.append("name")
@@ -113,8 +114,8 @@ def handle_lead_capture(state: AgentState):
     if not current_platform: missing.append("creator platform (e.g. YouTube, Instagram)")
 
     if missing:
-        # Generate dynamic request using LLM for natural conversation
-        ask_msg = f"Awesome! To get you started on the right plan, I just need a few details. Could you please provide your {', '.join(missing)}?"
+        # Prompt for missing info
+        ask_msg = f"Awesome! To get you started, I just need a few more details: {', '.join(missing)}. Could you please provide those?"
         return {
             "messages": [AIMessage(content=ask_msg)],
             "lead_name": current_name,
