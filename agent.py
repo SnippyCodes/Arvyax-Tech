@@ -5,7 +5,7 @@ from typing import TypedDict, Annotated, List, Optional, Literal
 from pydantic import BaseModel, Field
 
 from langchain_core.messages import BaseMessage, AIMessage, SystemMessage, HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -45,8 +45,8 @@ class LeadExtraction(BaseModel):
     platform: Optional[str] = Field(description="The creator platform (e.g., YouTube, Instagram, TikTok), if provided. Leave null if not provided.")
 
 # Agent Nodes & Logic
-# Initialize LLM with Gemini 1.5 Flash (Mandatory Stack)
-llm = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
+# Initialize LLM with Groq
+llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
 
 # Create structured output wrappers
 intent_llm = llm.with_structured_output(IntentClassification)

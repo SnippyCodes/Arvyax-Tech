@@ -7,6 +7,7 @@ This repository contains the solution for the "Social-to-Lead Agentic Workflow" 
 - **Local RAG**: Uses a JSON knowledge base to accurately retrieve pricing and policy details.
 - **Lead Capture Mechanism**: Gathers Name, Email, and Creator Platform asynchronously and triggers a mock database execution once all constraints are met.
 - **Stateful Memory**: Employs LangGraph's native checkpointer to persist context across 5-6 conversational turns.
+- **Rich Terminal UI**: Beautiful, styled interactive command-line interface with Markdown support and thinking animations using `rich`.
 
 ## How to run locally
 
@@ -28,12 +29,12 @@ pip install -r requirements.txt
 ```
 
 4. **Configure Environment Variables**:
-Copy the `.env.example` file to `.env` and add your Google (Gemini) API Key:
+Copy the `.env.example` file to `.env` and add your Groq API Key:
 ```bash
 cp .env.example .env
 ```
 Ensure your `.env` contains:
-`GOOGLE_API_KEY=your_google_api_key_here`
+`GROQ_API_KEY=your_groq_api_key_here`
 
 5. **Run the Agent**:
 ```bash
